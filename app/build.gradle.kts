@@ -6,7 +6,7 @@ plugins {
 android {
     namespace = "com.cinetrack.hub"
     compileSdk = 34
-    defaultConfig { applicationId = "com.cinetrack.hub"; minSdk = 26; targetSdk = 34; versionCode = 1; versionName = "1.0" }
+    defaultConfig { applicationId = "com.cinetrack.hub"; minSdk = 26; targetSdk = 34; versionCode = 2; versionName = "2.0" }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     kotlinOptions { jvmTarget = "17" }
     buildFeatures { compose = true }
@@ -18,4 +18,5 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-core")
+    implementation("io.coil-kt:coil-compose:2.7.0")
 }
