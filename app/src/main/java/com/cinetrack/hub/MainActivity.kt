@@ -20,9 +20,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -30,21 +30,21 @@ import androidx.compose.ui.unit.sp
 import java.util.Locale
 import kotlin.math.roundToInt
 
-private val BgObsidian = Color(0xFF090D16)
-private val GlassCard = Color(0xFF131B2E)
-private val GlassBorder = Color(0xFF25324D)
+private val OledBlack = Color(0xFF000000)
+private val CardSurface = Color(0xFF0A0A0A)
+private val DividerLine = Color(0xFF242424)
+private val NeonGreen = Color(0xFFB6FF3C)
+private val SecondaryGreen = Color(0xFF72C94A)
 private val ImdbGold = Color(0xFFF5C518)
-private val SpeedCyan = Color(0xFF00E5FF)
-private val NeonPurple = Color(0xFF9D6BFF)
-private val TextPrimary = Color(0xFFF3F6FC)
-private val TextMuted = Color(0xFF8E9BB5)
+private val TextWhite = Color(0xFFF5F5F5)
+private val TextMuted = Color(0xFF777777)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MaterialTheme(colorScheme = darkColorScheme(background = BgObsidian, surface = GlassCard, primary = SpeedCyan, onBackground = TextPrimary, onSurface = TextPrimary)) {
-                Surface(modifier = Modifier.fillMaxSize(), color = BgObsidian) { CineTrackApp() }
+            MaterialTheme(colorScheme = darkColorScheme(background = OledBlack, surface = CardSurface, primary = NeonGreen, onBackground = TextWhite, onSurface = TextWhite)) {
+                Surface(modifier = Modifier.fillMaxSize(), color = OledBlack) { CineTrackApp() }
             }
         }
     }
@@ -59,23 +59,26 @@ fun CineTrackApp() {
     fun saveAll(list: List<MediaEntry>) { entries = list; StorageHelper.saveEntries(ctx, list) }
 
     Scaffold(
-        containerColor = BgObsidian,
+        containerColor = OledBlack,
         topBar = {
             Row(Modifier.fillMaxWidth().statusBarsPadding().padding(16.dp, 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                 Column {
-                    Text("CINETRACK", color = SpeedCyan, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.5.sp)
-                    Text("${entries.size} titles in vault", color = TextMuted, fontSize = 12.sp)
+                    Text("CINETRACK", color = NeonGreen, fontSize = 20.sp, fontWeight = FontWeight.Black, letterSpacing = 1.8.sp)
+                    Text("${entries.size} TITLES IN VAULT", color = TextMuted, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
                 }
-                Button(onClick = { showAdd = true }, colors = ButtonDefaults.buttonColors(containerColor = SpeedCyan, contentColor = BgObsidian), shape = RoundedCornerShape(12.dp)) {
-                    Icon(Icons.Default.Add, null, Modifier.size(18.dp)); Spacer(Modifier.width(4.dp)); Text("Add", fontWeight = FontWeight.Bold)
+                Button(onClick = { showAdd = true }, colors = ButtonDefaults.buttonColors(containerColor = NeonGreen, contentColor = OledBlack), shape = RoundedCornerShape(10.dp)) {
+                    Icon(Icons.Default.Add, null, Modifier.size(18.dp)); Spacer(Modifier.width(4.dp)); Text("Add", fontWeight = FontWeight.ExtraBold)
                 }
             }
         },
         bottomBar = {
-            NavigationBar(containerColor = Color(0xFF0E1422)) {
-                NavigationBarItem(selected = tab == 0, onClick = { tab = 0 }, icon = { Icon(Icons.Default.Home, null) }, label = { Text("Library") })
-                NavigationBarItem(selected = tab == 1, onClick = { tab = 1 }, icon = { Icon(Icons.Default.Star, null) }, label = { Text("Taste DNA") })
-                NavigationBarItem(selected = tab == 2, onClick = { tab = 2 }, icon = { Icon(Icons.Default.Share, null) }, label = { Text("CSV Vault") })
+            Column {
+                HorizontalDivider(color = DividerLine, thickness = 1.dp)
+                NavigationBar(containerColor = OledBlack) {
+                    NavigationBarItem(selected = tab == 0, onClick = { tab = 0 }, icon = { Icon(Icons.Default.Home, null) }, label = { Text("Library") }, colors = NavigationBarItemDefaults.colors(selectedIconColor = OledBlack, indicatorColor = NeonGreen, selectedTextColor = NeonGreen))
+                    NavigationBarItem(selected = tab == 1, onClick = { tab = 1 }, icon = { Icon(Icons.Default.Star, null) }, label = { Text("Taste DNA") }, colors = NavigationBarItemDefaults.colors(selectedIconColor = OledBlack, indicatorColor = NeonGreen, selectedTextColor = NeonGreen))
+                    NavigationBarItem(selected = tab == 2, onClick = { tab = 2 }, icon = { Icon(Icons.Default.Share, null) }, label = { Text("CSV Vault") }, colors = NavigationBarItemDefaults.colors(selectedIconColor = OledBlack, indicatorColor = NeonGreen, selectedTextColor = NeonGreen))
+                }
             }
         }
     ) { pad ->
@@ -102,49 +105,66 @@ fun LibraryScreen(entries: List<MediaEntry>, onToggle: (MediaEntry) -> Unit, onD
 
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 24.dp)) {
         item {
-            Card(shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, SpeedCyan.copy(0.35f)), colors = CardDefaults.cardColors(containerColor = Color.Transparent)) {
-                Box(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFF152238), Color(0xFF0E1626)))).padding(16.dp)) {
-                    Column {
-                        Text("⚡ SPEED-WATCH TIME SAVED", color = SpeedCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.height(6.dp))
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
-                            Column { Text(formatHoursMins(saved), color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold); Text("Saved at 1.35x–1.75x", color = TextMuted, fontSize = 12.sp) }
-                            Column(horizontalAlignment = Alignment.End) { Text("Total: ${formatHoursMins(origMins)}", color = TextPrimary, fontSize = 12.sp); Text("Actual: ${formatHoursMins(actMins)}", color = SpeedCyan, fontSize = 12.sp) }
+            Card(shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, NeonGreen.copy(0.45f)), colors = CardDefaults.cardColors(containerColor = CardSurface)) {
+                Column(Modifier.fillMaxWidth().padding(16.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text("⚡ SPEED-WATCH SAVED", color = NeonGreen, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                        Box(Modifier.clip(RoundedCornerShape(6.dp)).background(NeonGreen.copy(0.15f)).padding(8.dp, 2.dp)) {
+                            Text("OLED MODE", color = NeonGreen, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
+                        Column {
+                            Text(formatHoursMins(saved), color = NeonGreen, fontSize = 30.sp, fontWeight = FontWeight.Black, fontFamily = FontFamily.Monospace)
+                            Text("Saved at 1.35x–1.75x speed", color = TextMuted, fontSize = 12.sp)
+                        }
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text("Content: ${formatHoursMins(origMins)}", color = TextWhite, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
+                            Text("Actual: ${formatHoursMins(actMins)}", color = SecondaryGreen, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
                         }
                     }
                 }
             }
         }
-        item { OutlinedTextField(value = q, onValueChange = { q = it }, placeholder = { Text("Search title or tag...", color = TextMuted) }, leadingIcon = { Icon(Icons.Default.Search, null, tint = TextMuted) }, singleLine = true, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth()) }
-        item { LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) { items(listOf("All", "Watched", "Wishlist", "Anime", "Movie", "Series")) { f -> FilterChip(selected = filter == f, onClick = { filter = f }, label = { Text(f, fontSize = 12.sp) }) } } }
+        item { OutlinedTextField(value = q, onValueChange = { q = it }, placeholder = { Text("Search title or tag...", color = TextMuted) }, leadingIcon = { Icon(Icons.Default.Search, null, tint = NeonGreen) }, singleLine = true, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) }
+        item {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(listOf("All", "Watched", "Wishlist", "Anime", "Movie", "Series")) { f ->
+                    val sel = filter == f
+                    FilterChip(selected = sel, onClick = { filter = f }, label = { Text(f, fontSize = 12.sp, fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal) }, colors = FilterChipDefaults.filterChipColors(selectedContainerColor = NeonGreen, selectedLabelColor = OledBlack, containerColor = CardSurface, labelColor = TextMuted))
+                }
+            }
+        }
         items(list, key = { it.id }) { item ->
             val sMins = if (item.status == "Watched") (item.runtimeMinutes - (item.runtimeMinutes / item.speed).roundToInt()).coerceAtLeast(0) else 0
-            Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = GlassCard), border = BorderStroke(1.dp, GlassBorder), modifier = Modifier.fillMaxWidth()) {
+            Card(shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = CardSurface), border = BorderStroke(1.dp, DividerLine), modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(14.dp)) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                            Box(Modifier.clip(RoundedCornerShape(6.dp)).background(NeonPurple.copy(0.2f)).padding(7.dp, 2.dp)) { Text(item.type.uppercase(), color = NeonPurple, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+                            Box(Modifier.clip(RoundedCornerShape(4.dp)).background(NeonGreen.copy(0.15f)).padding(6.dp, 2.dp)) { Text(item.type.uppercase(), color = NeonGreen, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
                             Spacer(Modifier.width(8.dp))
-                            Text(item.title, color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(item.title, color = TextWhite, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                         IconButton(onClick = { onDel(item) }, modifier = Modifier.size(28.dp)) { Icon(Icons.Default.Delete, null, tint = TextMuted, modifier = Modifier.size(16.dp)) }
                     }
                     Spacer(Modifier.height(10.dp))
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Box(Modifier.clip(RoundedCornerShape(8.dp)).background(SpeedCyan.copy(0.15f)).padding(8.dp, 4.dp)) { Text("You: ${String.format(Locale.US, "%.1f", item.userRating)}/10", color = SpeedCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
-                            Box(Modifier.clip(RoundedCornerShape(8.dp)).background(ImdbGold.copy(0.18f)).padding(8.dp, 4.dp)) { Text("IMDb: ${String.format(Locale.US, "%.1f", item.imdbRating)}", color = ImdbGold, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+                            Box(Modifier.clip(RoundedCornerShape(6.dp)).background(NeonGreen.copy(0.14f)).padding(8.dp, 4.dp)) { Text("You: ${String.format(Locale.US, "%.1f", item.userRating)}", color = NeonGreen, fontSize = 12.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace) }
+                            Box(Modifier.clip(RoundedCornerShape(6.dp)).background(ImdbGold.copy(0.15f)).padding(8.dp, 4.dp)) { Text("IMDb: ${String.format(Locale.US, "%.1f", item.imdbRating)}", color = ImdbGold, fontSize = 12.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace) }
+                            Box(Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFF161616)).padding(8.dp, 4.dp)) { Text("${item.speed}x", color = SecondaryGreen, fontSize = 12.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace) }
                         }
                         val w = item.status == "Watched"
-                        Box(Modifier.clip(RoundedCornerShape(20.dp)).background(if (w) Color(0xFF153B2E) else Color(0xFF362A14)).clickable { onToggle(item) }.padding(10.dp, 4.dp)) {
-                            Text(if (w) "✓ Watched" else "+ Wishlist", color = if (w) Color(0xFF4ADE80) else ImdbGold, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                        Box(Modifier.clip(RoundedCornerShape(8.dp)).background(if (w) NeonGreen else Color(0xFF1A1A1A)).clickable { onToggle(item) }.padding(10.dp, 4.dp)) {
+                            Text(if (w) "✓ Watched" else "+ Wishlist", color = if (w) OledBlack else ImdbGold, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
                         }
                     }
                     Spacer(Modifier.height(8.dp))
-                    Text("Runtime: ${formatHoursMins(item.runtimeMinutes)} • ${item.speed}x" + if (sMins > 0) " (Saved ${sMins}m)" else "", color = TextMuted, fontSize = 11.sp)
+                    Text("Runtime: ${formatHoursMins(item.runtimeMinutes)}" + if (sMins > 0) " • Saved ${sMins}m" else "", color = TextMuted, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
                     if (item.tags.isNotEmpty()) {
                         Spacer(Modifier.height(8.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { item.tags.forEach { t -> Box(Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFF1D273D)).padding(8.dp, 3.dp)) { Text(t, color = TextMuted, fontSize = 10.sp) } } }
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { item.tags.forEach { t -> Box(Modifier.clip(RoundedCornerShape(4.dp)).border(1.dp, DividerLine, RoundedCornerShape(4.dp)).padding(8.dp, 3.dp)) { Text(t, color = TextMuted, fontSize = 10.sp) } } }
                     }
                 }
             }
@@ -158,15 +178,15 @@ fun StatsScreen(entries: List<MediaEntry>) {
     val avgU = if (w.isNotEmpty()) w.map { it.userRating }.average() else 0.0
     val avgI = if (w.isNotEmpty()) w.map { it.imdbRating }.average() else 0.0
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("PERSONAL TASTE DNA", color = SpeedCyan, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+        Text("PERSONAL TASTE DNA", color = NeonGreen, fontWeight = FontWeight.Bold, fontSize = 13.sp, letterSpacing = 1.sp)
         listOf(
-            Triple("Your Avg Rating", "${String.format(Locale.US, "%.2f", avgU)} / 10", SpeedCyan),
+            Triple("Your Avg Rating", "${String.format(Locale.US, "%.2f", avgU)} / 10", NeonGreen),
             Triple("IMDb Avg Rating", "${String.format(Locale.US, "%.2f", avgI)} / 10", ImdbGold),
-            Triple("Watched vs Wishlist", "${w.size} Watched • ${entries.size - w.size} Wishlist", Color(0xFF4ADE80)),
-            Triple("Rated Higher Than IMDb", "${w.count { it.userRating > it.imdbRating }} titles", NeonPurple)
+            Triple("Watched vs Wishlist", "${w.size} Watched • ${entries.size - w.size} Wishlist", SecondaryGreen),
+            Triple("Rated Higher Than IMDb", "${w.count { it.userRating > it.imdbRating }} titles", TextWhite)
         ).forEach { (k, v, c) ->
-            Card(shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = GlassCard), border = BorderStroke(1.dp, GlassBorder), modifier = Modifier.fillMaxWidth()) {
-                Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) { Text(k, color = TextMuted); Text(v, color = c, fontWeight = FontWeight.Bold) }
+            Card(shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = CardSurface), border = BorderStroke(1.dp, DividerLine), modifier = Modifier.fillMaxWidth()) {
+                Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) { Text(k, color = TextMuted); Text(v, color = c, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace) }
             }
         }
     }
@@ -178,9 +198,9 @@ fun CsvVaultScreen(entries: List<MediaEntry>, onImport: (List<MediaEntry>) -> Un
     val imp = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? -> if (uri != null) onImport(CsvHelper.importFromUri(ctx, uri)) }
     val exp = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri: Uri? -> if (uri != null) { CsvHelper.exportToUri(ctx, uri, entries); Toast.makeText(ctx, "Exported!", Toast.LENGTH_SHORT).show() } }
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Text("1-SECOND CSV VAULT", color = SpeedCyan, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-        Button(onClick = { imp.launch(arrayOf("text/*", "text/csv")) }, colors = ButtonDefaults.buttonColors(containerColor = SpeedCyan, contentColor = BgObsidian), shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().height(50.dp)) { Text("Import CSV (Letterboxd / Trakt / Custom)", fontWeight = FontWeight.Bold) }
-        OutlinedButton(onClick = { exp.launch("cinetrack_backup.csv") }, border = BorderStroke(1.dp, ImdbGold), shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().height(50.dp)) { Text("Export Clean CSV Backup", color = ImdbGold, fontWeight = FontWeight.Bold) }
+        Text("1-SECOND CSV VAULT", color = NeonGreen, fontWeight = FontWeight.Bold, fontSize = 13.sp, letterSpacing = 1.sp)
+        Button(onClick = { imp.launch(arrayOf("text/*", "text/csv")) }, colors = ButtonDefaults.buttonColors(containerColor = NeonGreen, contentColor = OledBlack), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().height(50.dp)) { Text("Import CSV (Letterboxd / Trakt / Custom)", fontWeight = FontWeight.ExtraBold) }
+        OutlinedButton(onClick = { exp.launch("cinetrack_backup.csv") }, border = BorderStroke(1.dp, DividerLine), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().height(50.dp)) { Text("Export Clean CSV Backup", color = NeonGreen, fontWeight = FontWeight.Bold) }
     }
 }
 
@@ -190,7 +210,7 @@ fun AddTitleDialog(onDismiss: () -> Unit, onSave: (MediaEntry) -> Unit) {
     var uRat by remember { mutableStateOf("9.5") }; var iRat by remember { mutableStateOf("8.5") }; var mins by remember { mutableStateOf("140") }
     var spd by remember { mutableDoubleStateOf(1.5) }; val tags = remember { mutableStateListOf<String>() }
     AlertDialog(
-        onDismissRequest = onDismiss, containerColor = GlassCard, title = { Text("Add Title", fontWeight = FontWeight.Bold) },
+        onDismissRequest = onDismiss, containerColor = CardSurface, title = { Text("Add Title", fontWeight = FontWeight.Bold, color = NeonGreen) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("Title") }, singleLine = true)
@@ -207,7 +227,7 @@ fun AddTitleDialog(onDismiss: () -> Unit, onSave: (MediaEntry) -> Unit) {
                 }
             }
         },
-        confirmButton = { Button(onClick = { if (title.isNotBlank()) onSave(MediaEntry(title = title.trim(), type = type, status = status, userRating = uRat.toDoubleOrNull() ?: 9.0, imdbRating = iRat.toDoubleOrNull() ?: 8.0, runtimeMinutes = mins.toIntOrNull() ?: 120, speed = spd, tags = tags.toList())) }, colors = ButtonDefaults.buttonColors(containerColor = SpeedCyan, contentColor = BgObsidian)) { Text("Save", fontWeight = FontWeight.Bold) } },
+        confirmButton = { Button(onClick = { if (title.isNotBlank()) onSave(MediaEntry(title = title.trim(), type = type, status = status, userRating = uRat.toDoubleOrNull() ?: 9.0, imdbRating = iRat.toDoubleOrNull() ?: 8.0, runtimeMinutes = mins.toIntOrNull() ?: 120, speed = spd, tags = tags.toList())) }, colors = ButtonDefaults.buttonColors(containerColor = NeonGreen, contentColor = OledBlack)) { Text("Save", fontWeight = FontWeight.ExtraBold) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = TextMuted) } }
     )
 }
