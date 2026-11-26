@@ -111,21 +111,6 @@ fun StatsScreen(entries: List<MediaEntry>) {
     }
 }
 
-@Composable
-fun CsvVaultScreen(entries: List<MediaEntry>, onImport: (List<MediaEntry>) -> Unit) {
-    val ctx = LocalContext.current
-    var apiKey by remember { mutableStateOf(StorageHelper.getTmdbKey(ctx)) }
-    val imp = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? -> if (uri != null) onImport(CsvHelper.importFromUri(ctx, uri)) }
-    val exp = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri: Uri? -> if (uri != null) { CsvHelper.exportToUri(ctx, uri, entries); Toast.makeText(ctx, "Exported!", Toast.LENGTH_SHORT).show() } }
-    Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Text("TMDB API KEY (AUTO POSTERS & BACKDROPS)", color = NeonGreen, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-        OutlinedTextField(value = apiKey, onValueChange = { apiKey = it; StorageHelper.saveTmdbKey(ctx, it) }, placeholder = { Text("Paste free TMDB v3 API key...", color = TextMuted) }, singleLine = true, modifier = Modifier.fillMaxWidth())
-        HorizontalDivider(color = DividerLine)
-        Text("1-SECOND CSV VAULT", color = NeonGreen, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-        Button(onClick = { imp.launch(arrayOf("text/*", "text/csv")) }, colors = ButtonDefaults.buttonColors(containerColor = NeonGreen, contentColor = OledBlack), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().height(50.dp)) { Text("Import CSV (Letterboxd / Trakt / Custom)", fontWeight = FontWeight.ExtraBold) }
-        OutlinedButton(onClick = { exp.launch("cinetrack_backup.csv") }, border = BorderStroke(1.dp, DividerLine), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().height(50.dp)) { Text("Export Clean CSV Backup", color = NeonGreen, fontWeight = FontWeight.Bold) }
-    }
-}
 
 @Composable
 fun AddTitleDialog(onDismiss: () -> Unit, onSave: (MediaEntry) -> Unit) {

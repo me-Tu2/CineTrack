@@ -27,17 +27,18 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import kotlinx.coroutines.launch
 import java.util.Locale
 import kotlin.math.roundToInt
 
 val OledBlack = Color(0xFF000000)
-val CardSurface = Color(0xFF0D0D0F)
+val CardSurface = Color(0xFF0B0B0E)
 val DividerLine = Color(0xFF242428)
 val NeonGreen = Color(0xFFB6FF3C)
 val SecondaryGreen = Color(0xFF72C94A)
 val ImdbGold = Color(0xFFF5C518)
 val TextWhite = Color(0xFFF5F5F5)
-val TextMuted = Color(0xFF8E8E93)
+val TextMuted = Color(0xFF777777)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -59,6 +60,24 @@ fun CineTrackApp() {
     var showAdd by remember { mutableStateOf(false) }
 
     fun saveAll(list: List<MediaEntry>) { entries = list; StorageHelper.saveEntries(ctx, list) }
+    val scope = rememberCoroutineScope()
+    var sync by remember { mutableStateOf(SyncProgress()) }
+
+    fun startSync() {
+        val key = StorageHelper.getTmdbKey(ctx)
+        if (key.isBlank()) { Toast.makeText(ctx, "Pehle TMDB key daalo", Toast.LENGTH_SHORT).show(); return }
+        if (sync.running) return
+        val todo = entries.filter { it.posterUrl.isBlank() }
+        if (todo.isEmpty()) { Toast.makeText(ctx, "Saare posters already hain", Toast.LENGTH_SHORT).show(); return }
+        sync = SyncProgress(true, 0, todo.size, 0)
+        scope.launch {
+            val found = TmdbSync.syncMissing(key, todo,
+                onProgress = { d, f -> sync = SyncProgress(true, d, todo.size, f) },
+                onBatch = { hits -> saveAll(entries.map { e -> applyArt(e, hits[e.id]) }) })
+            sync = SyncProgress(false, todo.size, todo.size, found)
+            Toast.makeText(ctx, "Sync done: $found/${todo.size} posters mile", Toast.LENGTH_LONG).show()
+        }
+    }
 
     if (selectedItem != null) {
         DetailScreen(
@@ -108,7 +127,7 @@ fun CineTrackApp() {
                     onToggle = { item -> saveAll(entries.map { if (it.id == item.id) it.copy(status = if (it.status == "Watched") "Wishlist" else "Watched") else it }) }
                 )
                 1 -> StatsScreen(entries)
-                2 -> CsvVaultScreen(entries) { imported -> saveAll(imported + entries); Toast.makeText(ctx, "Imported ${imported.size}!", Toast.LENGTH_SHORT).show() }
+                2 -> VaultTab(entries, sync, { startSync() }) { r -> saveAll(r.items + entries); Toast.makeText(ctx, "Imported ${r.items.size}, skipped ${r.skipped} duplicates", Toast.LENGTH_LONG).show() }
             }
         }
     }
@@ -125,7 +144,8 @@ fun LibraryScreen(entries: List<MediaEntry>, onOpenDetail: (MediaEntry) -> Unit,
     val actMins = watched.sumOf { (it.runtimeMinutes / it.speed).roundToInt() }
     val saved = (origMins - actMins).coerceAtLeast(0)
     val heroBackdrop = entries.firstOrNull { it.backdropUrl.isNotBlank() }?.backdropUrl ?: ""
-    val list = entries.filter { (it.title.contains(q, true) || it.tags.any { t -> t.contains(q, true) }) && (filter == "All" || it.status == filter || it.type.equals(filter, true)) }
+    val list = remember(entries, q, filter) { entries.filter { (it.title.contains(q, true) || it.tags.any { t -> t.contains(q, true) }) && (filter == "All" || it.status == filter || it.type.equals(filter, true)) } }
+    val wall = remember(entries) { entries.filter { it.posterUrl.isNotBlank() }.take(40).ifEmpty { entries.take(20) } }
 
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 14.dp), verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 24.dp)) {
         item {
@@ -164,7 +184,7 @@ fun LibraryScreen(entries: List<MediaEntry>, onOpenDetail: (MediaEntry) -> Unit,
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("POSTER WALL", color = TextMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        items(entries, key = { "car_${it.id}" }) { item ->
+                        items(wall, key = { "car_${it.id}" }) { item ->
                             Box(
                                 Modifier.width(104.dp).height(154.dp).clip(RoundedCornerShape(12.dp))
                                     .background(CardSurface).border(1.dp, DividerLine, RoundedCornerShape(12.dp))
