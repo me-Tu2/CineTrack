@@ -420,7 +420,7 @@ fun PosterWallScreen(
                     Box(Modifier.size(38.dp).clip(CircleShape).background(GlassDark).border(1.dp, BorderGlass, CircleShape).clickable { onBackHome() }, contentAlignment = Alignment.Center) {
                         Icon(Icons.Default.Close, null, tint = TextWhite, modifier = Modifier.size(18.dp))
                     }
-                    Text(when (typeFilter) { "All" -> "All Titles"; "Series" -> "Shows if (typeFilter == "All") "All Titles" else "${typeFilter}s" Anime"; else -> "${typeFilter}s" }, color = TextWhite, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
+                    Text(when (typeFilter) { "All" -> "All Titles"; "Series" -> "Shows & Anime"; else -> "${typeFilter}s" }, color = TextWhite, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
                 }
                 Row(Modifier.clip(CircleShape).background(GlassDark).border(1.dp, BorderGlass, CircleShape).padding(4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     Box(Modifier.clip(CircleShape).clickable { cardMode = !cardMode }.padding(10.dp, 6.dp)) {
