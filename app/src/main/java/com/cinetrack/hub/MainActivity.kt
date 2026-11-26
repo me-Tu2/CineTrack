@@ -74,7 +74,29 @@ fun CineTrackApp() {
     var wallStatus by remember { mutableStateOf("Watched") }
     var triggerSearch by remember { mutableStateOf(false) }
 
+    val appScope = rememberCoroutineScope()
+    var syncProg by remember { mutableStateOf(SyncProgress()) }
     fun saveAll(list: List<MediaEntry>) { entries = list; StorageHelper.saveEntries(ctx, list) }
+    fun runSync() {
+        if (syncProg.running) return
+        val key = StorageHelper.getTmdbKey(ctx)
+        if (key.isBlank()) { Toast.makeText(ctx, "Paste TMDB API key first", Toast.LENGTH_SHORT).show(); return }
+        val todo = entries.indices.filter { entries[it].posterUrl.isBlank() }
+        if (todo.isEmpty()) { Toast.makeText(ctx, "All posters synced!", Toast.LENGTH_SHORT).show(); return }
+        appScope.launch {
+            val mut = entries.toMutableList(); var found = 0
+            syncProg = SyncProgress(true, 0, todo.size, 0)
+            todo.forEachIndexed { i, idx ->
+                val cur = mut[idx]; val hit = TmdbHelper.searchTmdb(key, cur.title).firstOrNull()
+                if (hit != null && hit.posterUrl.isNotBlank()) { mut[idx] = cur.copy(posterUrl = hit.posterUrl, backdropUrl = hit.backdropUrl.ifBlank { cur.backdropUrl }, overview = cur.overview.ifBlank { hit.overview }); found++ }
+                syncProg = SyncProgress(true, i + 1, todo.size, found)
+                if ((i + 1) % 5 == 0 || i + 1 == todo.size) saveAll(mut.toList())
+                delay(90)
+            }
+            syncProg = SyncProgress(false, todo.size, todo.size, found)
+            Toast.makeText(ctx, "Synced $found HD posters (IMDb preserved)!", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     if (selectedItem != null) {
         DetailScreen(
@@ -156,11 +178,9 @@ fun CineTrackApp() {
                     onToggle = { item -> saveAll(entries.map { if (it.id == item.id) it.copy(status = if (it.status == "Watched") "Wishlist" else "Watched") else it }) },
                     onSaveAll = { saveAll(it) }
                 )
-                3 -> VaultHubScreen(entries) { imported ->
-                    val existing = entries.map { it.title.trim().lowercase(Locale.US) }.toSet()
-                    val clean = imported.distinctBy { it.title.trim().lowercase(Locale.US) }.filter { it.title.trim().lowercase(Locale.US) !in existing }
-                    saveAll(clean + entries)
-                    Toast.makeText(ctx, "Added ${clean.size} new (${imported.size - clean.size} duplicates skipped)", Toast.LENGTH_SHORT).show()
+                3 -> VaultHubScreen(entries, syncProg, { runSync() }) { res ->
+                    saveAll(res.items)
+                    Toast.makeText(ctx, "Vault updated (${res.skipped} duplicates skipped)", Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -512,7 +532,7 @@ fun PosterWallScreen(
 }
 
 @Composable
-fun VaultHubScreen(entries: List<MediaEntry>, onImport: (List<MediaEntry>) -> Unit) {
+fun VaultHubScreen(entries: List<MediaEntry>, sync: SyncProgress, onSync: () -> Unit, onImport: (ImportResult) -> Unit) {
     var subTab by remember { mutableIntStateOf(0) }
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -523,7 +543,7 @@ fun VaultHubScreen(entries: List<MediaEntry>, onImport: (List<MediaEntry>) -> Un
                 }
             }
         }
-        if (subTab == 0) StatsScreen(entries) else CsvVaultScreen(entries, onImport)
+        if (subTab == 0) StatsScreen(entries) else VaultTab(entries, sync, onSync, onImport)
     }
 }
 
