@@ -1,14 +1,11 @@
 package com.cinetrack.hub
 
-import android.net.Uri
 import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -21,71 +18,95 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
 import java.util.Locale
+import kotlin.math.roundToInt
 
 @Composable
 fun DetailScreen(item: MediaEntry, onBack: () -> Unit, onUpdate: (MediaEntry) -> Unit, onDelete: (MediaEntry) -> Unit) {
     val ctx = LocalContext.current
+    val finishMins = (item.runtimeMinutes / item.speed).roundToInt().coerceAtLeast(1)
+    val savedMins = (item.runtimeMinutes - finishMins).coerceAtLeast(0)
+    val isWatched = item.status == "Watched"
+
     Column(Modifier.fillMaxSize().background(OledBlack).verticalScroll(rememberScrollState())) {
-        Box(Modifier.fillMaxWidth().height(270.dp)) {
-            val bg = item.backdropUrl.ifBlank { item.posterUrl }
-            if (bg.isNotBlank()) AsyncImage(model = bg, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0x44000000), OledBlack))))
-            IconButton(onClick = onBack, modifier = Modifier.statusBarsPadding().padding(12.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xAA000000))) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = NeonGreen)
+        Box(Modifier.fillMaxWidth().height(235.dp)) {
+            if (item.backdropUrl.isNotBlank() || item.posterUrl.isNotBlank()) {
+                AsyncImage(model = item.backdropUrl.ifBlank { item.posterUrl }, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            } else {
+                Box(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(Color(0xFF214212), OledBlack))))
+            }
+            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0x66000000), Color(0xBB000000), OledBlack))))
+            IconButton(onClick = onBack, modifier = Modifier.statusBarsPadding().padding(8.dp).clip(CircleShape).background(Color(0x99000000))) {
+                Icon(Icons.Default.ArrowBack, null, tint = NeonLime)
             }
             Row(Modifier.align(Alignment.BottomStart).padding(16.dp), verticalAlignment = Alignment.Bottom) {
-                PosterBox(url = item.posterUrl, title = item.title, modifier = Modifier.width(86.dp).height(126.dp).clip(RoundedCornerShape(12.dp)).border(1.dp, NeonGreen.copy(0.5f), RoundedCornerShape(12.dp)))
-                Spacer(Modifier.width(14.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(item.type.uppercase(), color = NeonGreen, fontSize = 11.sp, fontWeight = FontWeight.Black)
-                    Text(item.title, color = TextWhite, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
-                    Spacer(Modifier.height(6.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Box(Modifier.clip(RoundedCornerShape(6.dp)).background(NeonGreen.copy(0.18f)).padding(8.dp, 4.dp)) { Text("You: ${String.format(Locale.US, "%.1f", item.userRating)}/10", color = NeonGreen, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
-                        Box(Modifier.clip(RoundedCornerShape(6.dp)).background(ImdbGold.copy(0.18f)).padding(8.dp, 4.dp)) { Text("IMDb: ${String.format(Locale.US, "%.1f", item.imdbRating)}", color = ImdbGold, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+                PosterBox(url = item.posterUrl, title = item.title, modifier = Modifier.width(88.dp).height(130.dp).clip(RoundedCornerShape(12.dp)).border(1.dp, NeonLime.copy(0.5f), RoundedCornerShape(12.dp)))
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Text(item.type.uppercase(), color = NeonLime, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                    Text(item.title, color = TextWhite, fontSize = 20.sp, fontWeight = FontWeight.Black, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text("You: ${String.format(Locale.US, "%.1f", item.userRating)}/10", color = NeonLime, fontSize = 12.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
+                        Text("IMDb: ${if (item.imdbRating > 0.0) String.format(Locale.US, "%.1f", item.imdbRating) else "—"}", color = ImdbGold, fontSize = 12.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
                     }
                 }
             }
         }
 
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Button(onClick = { launchMpvRx(ctx, item.title) }, colors = ButtonDefaults.buttonColors(containerColor = NeonGreen, contentColor = OledBlack), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().height(50.dp)) {
-                Icon(Icons.Default.PlayArrow, null); Spacer(Modifier.width(6.dp)); Text("Play in mpvRx (${item.speed}x)", fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
-            }
-
-            if (item.overview.isNotBlank()) {
-                Text("OVERVIEW", color = TextMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                Text(item.overview, color = TextWhite, fontSize = 13.sp, lineHeight = 19.sp)
-            }
-
-            Text("PLAYBACK SPEED", color = TextMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(1.0, 1.35, 1.5, 1.75).forEach { sp ->
-                    FilterChip(selected = item.speed == sp, onClick = { onUpdate(item.copy(speed = sp)) }, label = { Text("${sp}x", fontWeight = FontWeight.Bold) }, colors = FilterChipDefaults.filterChipColors(selectedContainerColor = NeonGreen, selectedLabelColor = OledBlack))
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Button(onClick = { launchMpvRx(ctx, item.title) }, colors = ButtonDefaults.buttonColors(containerColor = NeonLime, contentColor = OledBlack), shape = RoundedCornerShape(14.dp), modifier = Modifier.weight(1f).height(48.dp)) {
+                    Icon(Icons.Default.PlayArrow, null); Spacer(Modifier.width(4.dp)); Text("Play (${item.speed}x)", fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
+                }
+                Button(
+                    onClick = {
+                        val next = if (isWatched) "Wishlist" else "Watched"
+                        onUpdate(item.copy(status = next))
+                        Toast.makeText(ctx, if (next == "Watched") "Marked Watched ✓" else "Moved to Watchlist ⏳", Toast.LENGTH_SHORT).show()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = if (isWatched) CardDark else Color(0xFF1D3326), contentColor = if (isWatched) ImdbGold else NeonLime),
+                    border = BorderStroke(1.dp, if (isWatched) ImdbGold.copy(0.5f) else NeonLime.copy(0.6f)),
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.weight(1f).height(48.dp)
+                ) {
+                    Text(if (isWatched) "⏳ To Watchlist" else "✓ Mark Watched", fontWeight = FontWeight.ExtraBold, fontSize = 12.sp)
                 }
             }
 
-            if (item.type != "Movie" && item.totalEpisodes > 1) {
-                Text("EPISODE TRACKER (${item.watchedEpisodes}/${item.totalEpisodes})", color = NeonGreen, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                (1..minOf(item.totalEpisodes, 30)).forEach { ep ->
-                    val done = ep <= item.watchedEpisodes
-                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(CardSurface).clickable { onUpdate(item.copy(watchedEpisodes = if (done) ep - 1 else ep, status = if (ep >= item.totalEpisodes) "Watched" else item.status)) }.padding(12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text("Episode $ep", color = TextWhite, fontWeight = FontWeight.SemiBold)
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Text(if (done) "✓ Watched" else "Mark", color = if (done) NeonGreen else TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            IconButton(onClick = { launchMpvRx(ctx, "${item.title} E$ep") }, modifier = Modifier.size(26.dp)) { Icon(Icons.Default.PlayArrow, null, tint = NeonGreen) }
+            Card(shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = CardDark), border = BorderStroke(1.dp, NeonLime.copy(0.35f))) {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text("⏱️ FINISH TIME CALCULATOR", color = NeonLime, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Box(Modifier.clip(CircleShape).background(GlassDark).clickable { onUpdate(item.copy(runtimeMinutes = (item.runtimeMinutes - 15).coerceAtLeast(15))) }.padding(8.dp, 3.dp)) { Text("-15m", color = TextWhite, fontSize = 10.sp, fontFamily = FontFamily.Monospace) }
+                            Box(Modifier.clip(CircleShape).background(GlassDark).clickable { onUpdate(item.copy(runtimeMinutes = item.runtimeMinutes + 15)) }.padding(8.dp, 3.dp)) { Text("+15m", color = TextWhite, fontSize = 10.sp, fontFamily = FontFamily.Monospace) }
+                        }
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Column { Text("ORIGINAL", color = TextMuted, fontSize = 9.sp); Text(formatHoursMins(item.runtimeMinutes), color = TextWhite, fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace) }
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) { Text("FINISHES IN", color = NeonLime, fontSize = 9.sp, fontWeight = FontWeight.Bold); Text(formatHoursMins(finishMins), color = NeonLime, fontSize = 18.sp, fontWeight = FontWeight.Black, fontFamily = FontFamily.Monospace) }
+                        Column(horizontalAlignment = Alignment.End) { Text("YOU SAVE", color = MintTeal, fontSize = 9.sp); Text("${savedMins}m", color = MintTeal, fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace) }
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(1.0, 1.35, 1.5, 1.75).forEach { sp ->
+                            val sel = item.speed == sp
+                            Box(Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).background(if (sel) NeonLime else GlassDark).clickable { onUpdate(item.copy(speed = sp)) }.padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
+                                Text("${sp}x", color = if (sel) OledBlack else TextWhite, fontWeight = FontWeight.Bold, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
+                            }
                         }
                     }
                 }
             }
 
-            OutlinedButton(onClick = { onDelete(item) }, border = BorderStroke(1.dp, Color(0xFF552222)), modifier = Modifier.fillMaxWidth()) {
-                Text("Remove from Vault", color = Color(0xFFFF6B6B))
+            if (item.overview.isNotBlank()) Text(item.overview, color = TextMuted, fontSize = 13.sp, lineHeight = 18.sp)
+
+            OutlinedButton(onClick = { onDelete(item) }, border = BorderStroke(1.dp, Color(0xFFFF453A).copy(0.5f)), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Default.Delete, null, tint = Color(0xFFFF453A), modifier = Modifier.size(16.dp)); Spacer(Modifier.width(6.dp)); Text("Remove from Vault", color = Color(0xFFFF453A), fontSize = 12.sp)
             }
         }
     }
@@ -93,69 +114,136 @@ fun DetailScreen(item: MediaEntry, onBack: () -> Unit, onUpdate: (MediaEntry) ->
 
 @Composable
 fun StatsScreen(entries: List<MediaEntry>) {
-    val w = entries.filter { it.status == "Watched" }
-    val avgU = if (w.isNotEmpty()) w.map { it.userRating }.average() else 0.0
-    val avgI = if (w.isNotEmpty()) w.map { it.imdbRating }.average() else 0.0
+    val ctx = LocalContext.current
+    val watched = entries.filter { it.status == "Watched" }
+    val wishlist = entries.filter { it.status != "Watched" }
+    val savedMins = watched.sumOf { (it.runtimeMinutes - (it.runtimeMinutes / it.speed).roundToInt()).coerceAtLeast(0) }
+    val savedHrs = savedMins / 60
+    val rankTitle = when {
+        savedHrs >= 800 -> "🏆 CHRONOS GRANDMASTER"
+        savedHrs >= 300 -> "⚡ SPEED-WATCH WARLORD"
+        savedHrs >= 100 -> "🎬 BINGE TACTICIAN"
+        else -> "🍿 CINEMA EXPLORER"
+    }
+
+    var roulettePool by remember { mutableStateOf(if (wishlist.isNotEmpty()) "Wishlist" else "9.5+ Gems") }
+    var picked by remember { mutableStateOf<MediaEntry?>(null) }
+
+    val avgYou = if (watched.isNotEmpty()) watched.map { it.userRating }.average() else 0.0
+    val imdbList = watched.filter { it.imdbRating > 0.0 }
+    val avgImdb = if (imdbList.isNotEmpty()) imdbList.map { it.imdbRating }.average() else 0.0
+    val hotTakes = imdbList.sortedByDescending { it.userRating - it.imdbRating }.take(4)
+
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("PERSONAL TASTE DNA", color = NeonGreen, fontWeight = FontWeight.Bold, fontSize = 13.sp, letterSpacing = 1.sp)
-        listOf(
-            Triple("Your Avg Rating", "${String.format(Locale.US, "%.2f", avgU)} / 10", NeonGreen),
-            Triple("IMDb Avg Rating", "${String.format(Locale.US, "%.2f", avgI)} / 10", ImdbGold),
-            Triple("Watched vs Wishlist", "${w.size} Watched • ${entries.size - w.size} Wishlist", SecondaryGreen),
-            Triple("Rated Higher Than IMDb", "${w.count { it.userRating > it.imdbRating }} titles", TextWhite)
-        ).forEach { (k, v, c) ->
-            Card(shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = CardSurface), border = BorderStroke(1.dp, DividerLine), modifier = Modifier.fillMaxWidth()) {
-                Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) { Text(k, color = TextMuted); Text(v, color = c, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace) }
+        Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = NeonLime)) {
+            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("YOUR CINEMA RANK", color = OledBlack.copy(0.75f), fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                Text(rankTitle, color = OledBlack, fontSize = 20.sp, fontWeight = FontWeight.Black)
+                Text("${savedHrs}h+ saved across ${watched.size} titles • Avg You ${String.format(Locale.US, "%.2f", avgYou)} vs IMDb ${String.format(Locale.US, "%.2f", avgImdb)}", color = OledBlack.copy(0.85f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+
+        Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = CardDark), border = BorderStroke(1.dp, NeonLime.copy(0.4f))) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text("🎲 KYA DEKHUN? ROULETTE", color = NeonLime, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf("Wishlist", "9.5+ Gems").forEach { mode ->
+                            val sel = roulettePool == mode
+                            Box(Modifier.clip(CircleShape).background(if (sel) NeonLime else GlassDark).clickable { roulettePool = mode }.padding(9.dp, 4.dp)) {
+                                Text(mode, color = if (sel) OledBlack else TextWhite, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+                Button(
+                    onClick = {
+                        val pool = if (roulettePool == "Wishlist") wishlist else entries.filter { it.userRating >= 9.5 }
+                        picked = (pool.ifEmpty { entries }).randomOrNull()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = GlassDark, contentColor = NeonLime),
+                    border = BorderStroke(1.dp, NeonLime.copy(0.5f)),
+                    shape = CircleShape,
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("🎲 Spin Random Title", fontWeight = FontWeight.ExtraBold, fontSize = 13.sp) }
+
+                picked?.let { m ->
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(GlassDark).padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        PosterBox(url = m.posterUrl, title = m.title, modifier = Modifier.width(56.dp).height(82.dp).clip(RoundedCornerShape(8.dp)))
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(m.title, color = TextWhite, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text("You ${m.userRating} • IMDb ${m.imdbRating} • ${formatHoursMins((m.runtimeMinutes / m.speed).roundToInt())}", color = NeonLime, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
+                            Box(Modifier.clip(CircleShape).background(NeonLime).clickable { launchMpvRx(ctx, m.title) }.padding(12.dp, 4.dp)) {
+                                Text("Play in mpvRx ▶", color = OledBlack, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (hotTakes.isNotEmpty()) {
+            Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = CardDark), border = BorderStroke(1.dp, BorderGlass)) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("🔥 YOUR HOT TAKES (YOU VS IMDB)", color = ImdbGold, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                    hotTakes.forEach { m ->
+                        val diff = m.userRating - m.imdbRating
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text(m.title, color = TextWhite, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                            Text("${String.format(Locale.US, "%+.1f", diff)} (${m.userRating} vs ${m.imdbRating})", color = if (diff >= 0) NeonLime else Color(0xFFFF6B6B), fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
+                        }
+                    }
+                }
             }
         }
     }
 }
 
-
 @Composable
-fun AddTitleDialog(onDismiss: () -> Unit, onSave: (MediaEntry) -> Unit) {
+fun AddTitleDialog(onDismiss: () -> Unit, onAdd: (MediaEntry) -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val apiKey = remember { StorageHelper.getTmdbKey(ctx) }
-    var title by remember { mutableStateOf("") }; var type by remember { mutableStateOf("Movie") }; var status by remember { mutableStateOf("Watched") }
-    var uRat by remember { mutableStateOf("9.5") }; var iRat by remember { mutableStateOf("8.5") }; var mins by remember { mutableStateOf("140") }
-    var poster by remember { mutableStateOf("") }; var backdrop by remember { mutableStateOf("") }; var overview by remember { mutableStateOf("") }
-    var spd by remember { mutableDoubleStateOf(1.5) }; var results by remember { mutableStateOf<List<MediaEntry>>(emptyList()) }
+    var query by remember { mutableStateOf("") }
+    var status by remember { mutableStateOf("Wishlist") }
+    var results by remember { mutableStateOf<List<MediaEntry>>(emptyList()) }
+    var searching by remember { mutableStateOf(false) }
 
     AlertDialog(
-        onDismissRequest = onDismiss, containerColor = CardSurface, title = { Text("Add Movie / Anime", fontWeight = FontWeight.Bold, color = NeonGreen) },
+        onDismissRequest = onDismiss, containerColor = CardDark,
+        title = { Text("Add to Vault", color = NeonLime, fontWeight = FontWeight.Black) },
         text = {
-            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("Title") }, singleLine = true, modifier = Modifier.weight(1f))
-                    if (apiKey.isNotBlank()) {
-                        Button(onClick = { scope.launch { results = TmdbHelper.searchTmdb(apiKey, title) } }, colors = ButtonDefaults.buttonColors(containerColor = NeonGreen, contentColor = OledBlack), contentPadding = PaddingValues(10.dp)) {
-                            Icon(Icons.Default.Search, null)
-                        }
-                    }
-                }
-                results.forEach { hit ->
-                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(Color(0xFF18181D)).clickable {
-                        title = hit.title; type = hit.type; iRat = hit.imdbRating.toString(); mins = hit.runtimeMinutes.toString()
-                        poster = hit.posterUrl; backdrop = hit.backdropUrl; overview = hit.overview; results = emptyList()
-                    }.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        PosterBox(url = hit.posterUrl, title = hit.title, modifier = Modifier.width(34.dp).height(50.dp).clip(RoundedCornerShape(4.dp)))
-                        Spacer(Modifier.width(8.dp))
-                        Text("${hit.title} (${hit.type} • ★${hit.imdbRating})", color = TextWhite, fontSize = 12.sp, maxLines = 2)
-                    }
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { listOf("Movie", "Series", "Anime").forEach { t -> FilterChip(selected = type == t, onClick = { type = t }, label = { Text(t, fontSize = 11.sp) }) } }
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { listOf("Watched", "Wishlist").forEach { s -> FilterChip(selected = status == s, onClick = { status = s }, label = { Text(s, fontSize = 11.sp) }) } }
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedTextField(value = query, onValueChange = { query = it }, placeholder = { Text("Movie, Series, Anime...", color = TextMuted) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value = uRat, onValueChange = { uRat = it }, label = { Text("You") }, modifier = Modifier.weight(1f), singleLine = true)
-                    OutlinedTextField(value = iRat, onValueChange = { iRat = it }, label = { Text("IMDb") }, modifier = Modifier.weight(1f), singleLine = true)
+                    listOf("Wishlist", "Watched").forEach { st ->
+                        FilterChip(selected = status == st, onClick = { status = st }, label = { Text(st) }, colors = FilterChipDefaults.filterChipColors(selectedContainerColor = NeonLime, selectedLabelColor = OledBlack))
+                    }
                 }
-                OutlinedTextField(value = mins, onValueChange = { mins = it }, label = { Text("Runtime (mins)") }, singleLine = true)
-                OutlinedTextField(value = poster, onValueChange = { poster = it }, label = { Text("Poster Image URL (optional)") }, singleLine = true)
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { listOf(1.0, 1.35, 1.5, 1.75).forEach { sp -> FilterChip(selected = spd == sp, onClick = { spd = sp }, label = { Text("${sp}x", fontSize = 11.sp) }) } }
+                if (apiKey.isNotBlank()) {
+                    Button(onClick = { searching = true; scope.launch { results = TmdbHelper.searchTmdb(apiKey, query); searching = false } }, colors = ButtonDefaults.buttonColors(containerColor = GlassDark, contentColor = NeonLime), modifier = Modifier.fillMaxWidth()) {
+                        Text(if (searching) "Searching TMDB..." else "Search TMDB Posters")
+                    }
+                }
+                results.take(4).forEach { hit ->
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(GlassDark).clickable { onAdd(hit.copy(status = status)) }.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        PosterBox(url = hit.posterUrl, title = hit.title, modifier = Modifier.width(36.dp).height(52.dp).clip(RoundedCornerShape(6.dp)))
+                        Spacer(Modifier.width(8.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(hit.title, color = TextWhite, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                            Text("${hit.type} • IMDb ${hit.imdbRating}", color = ImdbGold, fontSize = 11.sp)
+                        }
+                        Text("+ Add", color = NeonLime, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+                }
             }
         },
-        confirmButton = { Button(onClick = { if (title.isNotBlank()) onSave(MediaEntry(title = title.trim(), type = type, status = status, userRating = uRat.toDoubleOrNull() ?: 9.0, imdbRating = iRat.toDoubleOrNull() ?: 8.0, runtimeMinutes = mins.toIntOrNull() ?: 120, speed = spd, posterUrl = poster.trim(), backdropUrl = backdrop.trim(), overview = overview)) }, colors = ButtonDefaults.buttonColors(containerColor = NeonGreen, contentColor = OledBlack)) { Text("Save", fontWeight = FontWeight.ExtraBold) } },
+        confirmButton = {
+            Button(onClick = { if (query.isNotBlank()) onAdd(MediaEntry(title = query.trim(), status = status)) }, colors = ButtonDefaults.buttonColors(containerColor = NeonLime, contentColor = OledBlack)) {
+                Text("Add Manual", fontWeight = FontWeight.Bold)
+            }
+        },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = TextMuted) } }
     )
 }

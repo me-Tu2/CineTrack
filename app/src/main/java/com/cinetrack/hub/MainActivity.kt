@@ -420,7 +420,7 @@ fun PosterWallScreen(
                     Box(Modifier.size(38.dp).clip(CircleShape).background(GlassDark).border(1.dp, BorderGlass, CircleShape).clickable { onBackHome() }, contentAlignment = Alignment.Center) {
                         Icon(Icons.Default.Close, null, tint = TextWhite, modifier = Modifier.size(18.dp))
                     }
-                    Text(if (typeFilter == "All") "All Titles" else "${typeFilter}s", color = TextWhite, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
+                    Text(when (typeFilter) { "All" -> "All Titles"; "Series" -> "Shows if (typeFilter == "All") "All Titles" else "${typeFilter}s" Anime"; else -> "${typeFilter}s" }, color = TextWhite, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
                 }
                 Row(Modifier.clip(CircleShape).background(GlassDark).border(1.dp, BorderGlass, CircleShape).padding(4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     Box(Modifier.clip(CircleShape).clickable { cardMode = !cardMode }.padding(10.dp, 6.dp)) {
@@ -490,7 +490,7 @@ fun PosterWallScreen(
                                 Modifier.align(Alignment.TopEnd).padding(6.dp).size(26.dp).clip(CircleShape)
                                     .background(if (isW) Color(0xCC1E2622) else Color(0x88000000))
                                     .border(1.dp, if (isW) NeonLime.copy(0.8f) else Color.White.copy(0.4f), CircleShape)
-                                    .clickable { onToggle(item) },
+                                    .clickable { onToggle(item); Toast.makeText(ctx, if (isW) "Moved to Watchlist ⏳" else "Marked Watched ✓", Toast.LENGTH_SHORT).show() },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(Icons.Default.Check, null, tint = if (isW) NeonLime else Color.White, modifier = Modifier.size(14.dp))
@@ -516,7 +516,7 @@ fun PosterWallScreen(
                             Text("You: ${String.format(Locale.US, "%.1f", item.userRating)}/10 • IMDb: ${if (item.imdbRating > 0.0) String.format(Locale.US, "%.1f", item.imdbRating) else "—"}", color = TextWhite.copy(0.85f), fontSize = 11.sp, fontFamily = FontFamily.Monospace)
                             Text("${item.speed}x • $savedM min saved", color = ImdbGold, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Box(Modifier.clip(CircleShape).background(if (isW) Color(0xFF173322) else GlassDark).clickable { onToggle(item) }.padding(10.dp, 4.dp)) {
+                                Box(Modifier.clip(CircleShape).background(if (isW) Color(0xFF173322) else GlassDark).clickable { onToggle(item); Toast.makeText(ctx, if (isW) "Moved to Watchlist ⏳" else "Marked Watched ✓", Toast.LENGTH_SHORT).show() }.padding(10.dp, 4.dp)) {
                                     Text(if (isW) "Watched" else "+ Wishlist", color = if (isW) NeonLime else ImdbGold, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                 }
                                 Box(Modifier.clip(CircleShape).background(Color(0xFF162836)).clickable { launchMpvRx(ctx, item.title) }.padding(10.dp, 4.dp)) {
