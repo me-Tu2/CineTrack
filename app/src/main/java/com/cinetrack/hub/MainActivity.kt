@@ -45,6 +45,11 @@ val MintTeal = Color(0xFF2CE6B8)
 val ImdbGold = Color(0xFFF5C518)
 val TextWhite = Color(0xFFF5F5F7)
 val TextMuted = Color(0xFF8E949A)
+val NeonGreen = NeonLime
+val CardSurface = CardDark
+val ElevatedCard = GlassDark
+val DividerLine = BorderGlass
+val SecondaryGreen = MintTeal
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
