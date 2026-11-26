@@ -173,48 +173,54 @@ object TmdbHelper {
 object CsvHelper {
     fun importFromUri(context: Context, uri: Uri): List<MediaEntry> {
         val out = mutableListOf<MediaEntry>()
+        val seen = mutableSetOf<String>()
         context.contentResolver.openInputStream(uri)?.use { stream ->
-            val reader = BufferedReader(InputStreamReader(stream))
-            val headers = parseLine(reader.readLine() ?: return emptyList()).map { it.trim().lowercase(Locale.US) }
-            val tIdx = headers.indexOfFirst { it in listOf("title", "name", "show", "movie") }.coerceAtLeast(0)
-            val uIdx = headers.indexOfFirst { it in listOf("userrating", "user_rating", "rating", "score") }
-            val iIdx = headers.indexOfFirst { it in listOf("imdbrating", "imdb_rating", "imdb", "vote_average") }
-            val typeIdx = headers.indexOfFirst { it in listOf("type", "media_type") }
-            val stIdx = headers.indexOfFirst { it in listOf("status", "watched") }
-            val minIdx = headers.indexOfFirst { it in listOf("runtimeminutes", "runtime", "minutes") }
+            val r = BufferedReader(InputStreamReader(stream))
+            val h = parseLine(r.readLine() ?: return emptyList()).map { it.trim().lowercase(Locale.US) }
+            val tIdx = h.indexOfFirst { it in listOf("title", "name", "show", "movie") }.coerceAtLeast(0)
+            val uIdx = h.indexOfFirst { it in listOf("your rating", "userrating", "user_rating", "rating", "score") }
+            val iIdx = h.indexOfFirst { it in listOf("imdb rating", "imdbrating", "imdb_rating", "imdb", "vote_average") }
+            val typeIdx = h.indexOfFirst { it in listOf("title type", "type", "media_type") }
+            val stIdx = h.indexOfFirst { it in listOf("status", "watched") }
+            val minIdx = h.indexOfFirst { it in listOf("runtime (mins)", "runtimeminutes", "runtime", "minutes") }
+            val posIdx = h.indexOf("position")
+            val genIdx = h.indexOf("genres")
+            val constIdx = h.indexOf("const")
+            val yrIdx = h.indexOf("year")
             var line: String?
-            while (reader.readLine().also { line = it } != null) {
+            while (r.readLine().also { line = it } != null) {
                 val c = parseLine(line!!)
                 val title = c.getOrNull(tIdx)?.trim().orEmpty()
-                if (title.isBlank()) continue
-                var u = c.getOrNull(uIdx)?.toDoubleOrNull() ?: 9.0
+                val key = c.getOrNull(constIdx)?.trim()?.takeIf { it.isNotBlank() }
+                    ?: "${title.lowercase(Locale.US)}_${c.getOrNull(yrIdx)?.trim().orEmpty()}"
+                if (title.isBlank() || !seen.add(key)) continue
+                val rawUser = c.getOrNull(uIdx)?.trim().orEmpty()
+                val rawSt = c.getOrNull(stIdx)?.trim().orEmpty()
+                val isWish = rawSt.equals("Wishlist", true) || rawSt.equals("Watchlist", true) || (posIdx >= 0 && rawUser.isBlank())
+                var u = rawUser.toDoubleOrNull() ?: if (isWish) 0.0 else 9.0
                 if (u in 0.5..5.0) u *= 2.0
-                out.add(MediaEntry(
-                    title = title, type = c.getOrNull(typeIdx)?.trim().orEmpty().ifBlank { "Movie" },
-                    status = if (c.getOrNull(stIdx)?.equals("Wishlist", true) == true) "Wishlist" else "Watched",
-                    userRating = u.coerceIn(0.0, 10.0), imdbRating = (c.getOrNull(iIdx)?.toDoubleOrNull() ?: 8.0).coerceIn(0.0, 10.0),
-                    runtimeMinutes = (c.getOrNull(minIdx)?.toIntOrNull() ?: 120).coerceAtLeast(1)
-                ))
+                val rawT = c.getOrNull(typeIdx)?.trim().orEmpty().lowercase(Locale.US)
+                val gen = c.getOrNull(genIdx)?.trim().orEmpty().lowercase(Locale.US)
+                val mType = when {
+                    rawT.contains("anime") || (gen.contains("animation") && (rawT.contains("series") || rawT.contains("tv"))) -> "Anime"
+                    rawT.contains("series") || rawT.contains("tv") || rawT.contains("episode") -> "Series"
+                    else -> "Movie"
+                }
+                out.add(MediaEntry(title = title, type = mType, status = if (isWish) "Wishlist" else "Watched", userRating = u.coerceIn(0.0, 10.0), imdbRating = (c.getOrNull(iIdx)?.toDoubleOrNull() ?: 0.0).coerceIn(0.0, 10.0), runtimeMinutes = (c.getOrNull(minIdx)?.toIntOrNull() ?: 120).coerceAtLeast(1)))
             }
         }
         return out
     }
-
     fun exportToUri(context: Context, uri: Uri, list: List<MediaEntry>) {
         context.contentResolver.openOutputStream(uri)?.use { out ->
             val sb = StringBuilder("Title,Type,Status,UserRating,IMDbRating,RuntimeMinutes,Speed,Tags\n")
-            list.forEach {
-                sb.appendLine("\"${it.title.replace("\"", "\"\"")}\",${it.type},${it.status},${it.userRating},${it.imdbRating},${it.runtimeMinutes},${it.speed},\"${it.tags.joinToString("|")}\"")
-            }
+            list.forEach { sb.appendLine("\"${it.title.replace("\"", "\"\"")}\",${it.type},${it.status},${it.userRating},${it.imdbRating},${it.runtimeMinutes},${it.speed},\"${it.tags.joinToString("|")}\"") }
             out.write(sb.toString().toByteArray())
         }
     }
-
     private fun parseLine(line: String): List<String> {
         val res = mutableListOf<String>(); val cur = StringBuilder(); var q = false
-        for (ch in line) {
-            when { ch == '"' -> q = !q; ch == ',' && !q -> { res.add(cur.toString()); cur.setLength(0) }; else -> cur.append(ch) }
-        }
+        for (ch in line) { when { ch == '"' -> q = !q; ch == ',' && !q -> { res.add(cur.toString()); cur.setLength(0) }; else -> cur.append(ch) } }
         res.add(cur.toString()); return res
     }
 }
